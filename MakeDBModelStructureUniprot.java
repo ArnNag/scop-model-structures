@@ -29,41 +29,24 @@ public class MakeDBModelStructureUniprot {
 		int model_structure_id = model_paths_rs.getInt("id");
 		String cif_path = model_paths_rs.getString("cif_path");
 		Path cif_path_p = Paths.get(cif_path);
-		String accession = getAccession(cif_path);
-		boolean hasNonObsolete = false;
-		boolean match = false;
-		boolean hasSeq = false;
-		List<String> DBseq;
-		List<String> UNPids = getUNPids(accession); 
-		String UNPid = "-1";
-		boolean hasUNPids = (UNPids.size() != 0);
-		String DBseqstr = "";
-		System.out.println("hasUNPids: " + hasUNPids);
-		String cifSeq = getSequence(cif_path_p).toLowerCase();
+		String[] sequenceEntryId = getSequenceEntryId(cif_path_p);
+		String cifSeq = sequenceEntryId[0];
+		String unpEntryId = sequenceEntryId[1];
+	        System.out.println("Entry ID: " + unpEntryId);
 		System.out.println("cif seq: " + cifSeq);
-		if (hasUNPids) {
-		    String fileSeq = getSequence(cif_path_p);
-		    List<String> nonObsolete = getLatestUNPids(accession);
-		    if (nonObsolete.size() != 0) {
-			hasNonObsolete = true;
-			UNPid = nonObsolete.get(0);
-		    } else {
-			UNPid = UNPids.get(0);
-		    }
-		    DBseq = getDBseq(UNPid);
-		    System.out.println("cif seq: " + cifSeq);
-		    hasSeq = (DBseq.size() != 0);
-		    if (hasSeq) {
-			DBseqstr = DBseq.get(0); 
-			// if (isFrag) {
-			//     DBseqstr = getFragSubseq(fragNum, DBseqstr);     
-			// } 
-			match = (DBseqstr.equals(cifSeq));
-		    }
-		}
-
+	        String[] DBseqUNPid = getDBseq(unpEntryId);
+		String DBseq = DBseqUNPid[0];
+		String UNPid = DBseqUNPid[1];
+	        System.out.println("astral seq: " + DBseq);
+		boolean match;
+		if (DBseq != null) {
+		match = DBseq.equals(cifSeq);
 		System.out.println("match: " + match);
-		
+		} else {
+		match = false;
+		System.out.println("not found");
+		}
+		System.out.println("");
 		if (match) {
 			insertModelUNP.setInt(1, model_structure_id);
 			insertModelUNP.setString(2, UNPid);
@@ -73,42 +56,7 @@ public class MakeDBModelStructureUniprot {
 			// insertModelUNP.executeUpdate();
 		}
 	    }
-		// stmt2.setString(1, pdb_path);
-		// stmt2.setString(2, cif_path);
-		// stmt1.executeUpdate();
-		// String accession = getAccession(p);
-		// boolean isFrag = isFrag(p);
-		// int fragNum = getFragNum(p);
-		// if (isFrag) {
-		// 	boolean hasNonObsolete = false;
-		// 	boolean match = false;
-		// 	boolean hasSeq = false;
-		// 	List<String> DBseq;
-		// 	List<String> UNPids = getUNPids(accession); 
-		// 	boolean hasUNPids = (UNPids.size() != 0);
-		// 	String DBseqstr = "";
-		// 	String PDBseq = getSequence(p).toLowerCase();
-		// 	if (hasUNPids) {
-		// 	    String fileSeq = getSequence(p);
-		// 	    List<String> nonObsolete = getLatestUNPids(accession);
-		// 	    if (nonObsolete.size() != 0) {
-		// 		hasNonObsolete = true;
-		// 		DBseq = getDBseq(nonObsolete.get(0));
-		// 	    } else {
-		// 		DBseq = getDBseq(UNPids.get(0));
-		// 	    }
-		// 	    hasSeq = (DBseq.size() != 0);
-		// 	    if (hasSeq) {
-		// 		DBseqstr = DBseq.get(0); 
-		// 		if (isFrag) {
-		// 		    DBseqstr = getFragSubseq(fragNum, DBseqstr);     
-		// 		} 
-		// 		match = (DBseqstr.equals(PDBseq));
-		// 	    }
-		// 	}
-		    // }
-	}
-        catch (Exception e) {
+	} catch (Exception e) {
             System.out.println("Exception: "+e.getMessage());
             e.printStackTrace();
         }
@@ -123,12 +71,16 @@ public class MakeDBModelStructureUniprot {
         return getAccession(p.getFileName().toString());
     }
 
-    private static String getSequence(Path p) throws Exception {
+    private static String[] getSequenceEntryId(Path p) throws Exception {
 	CifFile cifFile = CifIO.readFromPath(p);
 	MmCifFile mmCifFile = cifFile.as(StandardSchemata.MMCIF);
 	MmCifBlock data = mmCifFile.getFirstBlock();
-        return data.getEntityPoly().getPdbxSeqOneLetterCode().get(0);
+        String seq = data.getEntityPoly().getPdbxSeqOneLetterCode().get(0).replaceAll("\n", "").toLowerCase();
+	String entryId = data.getStructRef().getDbCode().get(0); 
+	return new String[] {seq, entryId};
     }
+
+    
     
     // Look for the Uniprot accession number in uniprot_accession. Return a list of all uniprot_ids that match. 
     private static List<String> getLatestUNPids(String accession) throws Exception {
@@ -138,9 +90,16 @@ public class MakeDBModelStructureUniprot {
     }
 
 
-    private static List<String> getDBseq(String UNPid) throws Exception {
-        String query = "select seq, astral_seq.id from uniprot_seq, astral_seq where uniprot_id = " + UNPid + " and seq_id = astral_seq.id;";
-	return rsToList(doQuery(query), "seq");
+    private static String[] getDBseq(String entryId) throws Exception {
+        String seq = null;	
+        String UNPid = null;	
+        String query = "select uniprot.id, astral_seq.seq from uniprot join uniprot_seq on uniprot.id = uniprot_seq.uniprot_id join astral_seq on astral_seq.id = uniprot_seq.seq_id where uniprot.long_id = '" + entryId + "' order by uniprot.seq_date desc limit 1;";	
+	ResultSet rs = doQuery(query);
+	if (rs.next()) {
+	    seq = rs.getString("seq");
+	    UNPid = rs.getString("id");
+	}
+	return new String[] {seq, UNPid};
     }
 
     private static boolean isFrag(Path p) {
