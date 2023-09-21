@@ -29,11 +29,11 @@ public class MakeDBModelStructureUniprot {
 		int model_structure_id = model_paths_rs.getInt("id");
 		String cif_path = model_paths_rs.getString("cif_path");
 		Path cif_path_p = Paths.get(cif_path);
-		String[] sequenceEntryId = getCifInfo(cif_path_p);
-		String cifSeq = sequenceEntryId[0];
-		String unpEntryId = sequenceEntryId[1];
-		int unpStartZero = Integer.parseInt(sequenceEntryId[2]) - 1;
-		int unpEndZero = Integer.parseInt(sequenceEntryId[3]) - 1;
+		CifInfo sequenceEntryId = getCifInfo(cif_path_p);
+		String cifSeq = sequenceEntryId.seq;
+		String unpEntryId = sequenceEntryId.entryId;
+		int unpStartZero = sequenceEntryId.unpStart;
+		int unpEndZero = sequenceEntryId.unpEnd;
 	        // System.out.println("Entry ID: " + unpEntryId);
 		// System.out.println("cif seq: " + cifSeq);
 	        List<List<String>> DBseqs = getDBseqs(unpEntryId);
@@ -71,7 +71,21 @@ public class MakeDBModelStructureUniprot {
         }
     }
 
-    private static String[] getCifInfo(Path p) throws Exception {
+    private static class CifInfo {
+        String seq;
+	String entryId;
+	int unpStart;
+	int unpEnd;
+
+	private CifInfo(String seq, String entryId, int unpStart, int unpEnd) {
+            this.seq = seq;
+	    this.entryId = entryId;
+	    this.unpStart = unpStart;
+	    this.unpEnd = unpEnd;
+	}
+    }
+
+    private static CifInfo getCifInfo(Path p) throws Exception {
 	CifFile cifFile = CifIO.readFromPath(p);
 	MmCifFile mmCifFile = cifFile.as(StandardSchemata.MMCIF);
 	MmCifBlock data = mmCifFile.getFirstBlock();
@@ -80,7 +94,9 @@ public class MakeDBModelStructureUniprot {
 	String entryId = structRef.getDbCode().get(0); 
 	String unpStart = structRef.getPdbxAlignBegin().get(0);
 	String unpEnd = structRef.getPdbxAlignEnd().get(0);
-	return new String[] {seq, entryId, unpStart, unpEnd};
+        int unpStartZero = Integer.parseInt(unpStart) - 1;
+        int unpEndZero = Integer.parseInt(unpEnd) - 1;
+	return new CifInfo(seq, entryId, unpStartZero, unpEndZero);
     }
 
 
