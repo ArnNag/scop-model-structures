@@ -29,41 +29,28 @@ public class MakeDBModelStructureUniprot {
 		int model_structure_id = model_paths_rs.getInt("id");
 		String cif_path = model_paths_rs.getString("cif_path");
 		Path cif_path_p = Paths.get(cif_path);
-		CifInfo sequenceEntryId = new CifInfo(cif_path_p);
-		String cifSeq = sequenceEntryId.seq;
-		String unpEntryId = sequenceEntryId.entryId;
-		int unpStartZero = sequenceEntryId.unpStart;
-		int unpEndZero = sequenceEntryId.unpEnd;
-	        // System.out.println("Entry ID: " + unpEntryId);
-		// System.out.println("cif seq: " + cifSeq);
-	        List<List<String>> DBseqs = getDBseqs(unpEntryId);
+		CifInfo modelInfo = new CifInfo(cif_path_p);
+	        List<List<String>> DBseqs = getDBseqs(modelInfo.entryId);
 		boolean match = false;
 		int numDBseq = 0;
 		while (numDBseq < DBseqs.get(0).size()) {
 		    String fullDBseq = DBseqs.get(0).get(numDBseq);
 		    String UNPid = DBseqs.get(1).get(numDBseq);
-	            // System.out.println("astral seq full: " + fullDBseq);
-		    // System.out.println("unpStartZero: " + unpStartZero);
-		    // System.out.println("unpEndZero: " + unpEndZero);
 
-		    if (unpEndZero < fullDBseq.length()) {
-		        String splicedDBseq = fullDBseq.substring(unpStartZero, unpEndZero + 1);
-	                // System.out.println("astral seq spliced: " + splicedDBseq);
-	       	        match = splicedDBseq.equals(cifSeq);
+		    if (modelInfo.unpStart < fullDBseq.length()) {
+		        String splicedDBseq = fullDBseq.substring(modelInfo.unpStart, modelInfo.unpEnd + 1);
+	       	        match = splicedDBseq.equals(modelInfo.seq);
 			if (match) {
-			    // System.out.println("match: " + match);
 			    insertModelUNP.setInt(1, model_structure_id);
 			    insertModelUNP.setString(2, UNPid);
-			    insertModelUNP.setInt(3, unpStartZero);
-			    insertModelUNP.setInt(4, unpEndZero);
-			    // System.out.println(insertModelUNP);
+			    insertModelUNP.setInt(3, modelInfo.unpStart);
+			    insertModelUNP.setInt(4, modelInfo.unpEnd);
 			    insertModelUNP.executeUpdate();
 			    break;
 			}
 		    }
 		    numDBseq++;
 		}
-		// System.out.println("");
 	    }
 	} catch (Exception e) {
             System.out.println("Exception: "+e.getMessage());
