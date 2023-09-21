@@ -71,15 +71,6 @@ public class MakeDBModelStructureUniprot {
         }
     }
 
-    // Extract the Uniprot accession number from the file name.
-    private static String getAccession(String fileName) {
-        return fileName.replaceAll(".*AF-", "").replaceAll("-.*", "");
-    }
-
-    private static String getAccession(Path p) {
-        return getAccession(p.getFileName().toString());
-    }
-
     private static String[] getCifInfo(Path p) throws Exception {
 	CifFile cifFile = CifIO.readFromPath(p);
 	MmCifFile mmCifFile = cifFile.as(StandardSchemata.MMCIF);
@@ -90,15 +81,6 @@ public class MakeDBModelStructureUniprot {
 	String unpStart = structRef.getPdbxAlignBegin().get(0);
 	String unpEnd = structRef.getPdbxAlignEnd().get(0);
 	return new String[] {seq, entryId, unpStart, unpEnd};
-    }
-
-    
-    
-    // Look for the Uniprot accession number in uniprot_accession. Return a list of all uniprot_ids that match. 
-    private static List<String> getLatestUNPids(String accession) throws Exception {
-        String query = "select uniprot_id from uniprot_accession, uniprot where uniprot.id = uniprot_id and uniprot.is_obsolete = 0 and accession = '" + accession + "';";
-	ResultSet unpIDrs = doQuery(query);
-	return rsToList(unpIDrs, "uniprot_id");
     }
 
 
@@ -114,43 +96,6 @@ public class MakeDBModelStructureUniprot {
 	return List.of(seqs, UNPids);
     }
 
-    private static boolean isFrag(Path p) {
-        String fileName = p.getFileName().toString();
-	String F2fileName = fileName.replaceFirst("-F\\d*-", "-F2-");
-	Path F2path = p.resolveSibling(Paths.get(F2fileName));
-	return Files.exists(F2path);
-    }
-
-    private static int getFragNum(Path p) {
-        String fileName = p.getFileName().toString();
-	Pattern fragPattern = Pattern.compile("-F\\d*-");
-	Matcher m = fragPattern.matcher(fileName);
-	if (m.find()) {
-		String fragMatch =  m.group();
-		return Integer.parseInt(fragMatch.substring(2, fragMatch.length() - 1));
-	}
-	return 0;
-
-    }
-
-    private static String getFragSubseq(int fragNum, String seq) {
-	    int fragIncrement = 200;
-	    int fragSize = 1400;
-	    int fragStart = (fragNum - 1) * fragIncrement;
-	    if (fragStart >= seq.length()) {
-		    return "out of range";
-	    }
-	    int fragEnd = Integer.min(fragStart + fragSize, seq.length());
-	    return seq.substring(fragStart, fragEnd);
-    }
-    
-    // Look for the Uniprot accession number in uniprot_accession. Return a list of all uniprot_ids that match. 
-    private static List<String> getUNPids(String accession) throws Exception {
-        String query = "select uniprot_id from uniprot_accession where accession = '" + accession + "';";
-	ResultSet unpIDrs = doQuery(query);
-	return rsToList(unpIDrs, "uniprot_id");
-    }
-    
     
     private static ResultSet doQuery(String query) throws Exception {
         Statement stmt = LocalSQL.createStatement();
