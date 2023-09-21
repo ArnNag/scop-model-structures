@@ -29,7 +29,7 @@ public class MakeDBModelStructureUniprot {
 		int model_structure_id = model_paths_rs.getInt("id");
 		String cif_path = model_paths_rs.getString("cif_path");
 		Path cif_path_p = Paths.get(cif_path);
-		CifInfo sequenceEntryId = getCifInfo(cif_path_p);
+		CifInfo sequenceEntryId = new CifInfo(cif_path_p);
 		String cifSeq = sequenceEntryId.seq;
 		String unpEntryId = sequenceEntryId.entryId;
 		int unpStartZero = sequenceEntryId.unpStart;
@@ -77,28 +77,21 @@ public class MakeDBModelStructureUniprot {
 	int unpStart;
 	int unpEnd;
 
-	private CifInfo(String seq, String entryId, int unpStart, int unpEnd) {
+	private CifInfo(Path p) throws Exception {
+	    CifFile cifFile = CifIO.readFromPath(p);
+            MmCifFile mmCifFile = cifFile.as(StandardSchemata.MMCIF);
+	    MmCifBlock data = mmCifFile.getFirstBlock();
+	    this.seq = data.getEntityPoly().getPdbxSeqOneLetterCode().get(0).replaceAll("\n", "").toLowerCase();
+	    StructRef structRef = data.getStructRef();
+	    this.entryId = structRef.getDbCode().get(0); 
+	    this.unpStart = Integer.parseInt(structRef.getPdbxAlignBegin().get(0)) - 1; // convert to zero-indexing
+	    this.unpEnd = Integer.parseInt(structRef.getPdbxAlignEnd().get(0)) - 1; // convert to zero-indexing
             this.seq = seq;
 	    this.entryId = entryId;
 	    this.unpStart = unpStart;
 	    this.unpEnd = unpEnd;
 	}
     }
-
-    private static CifInfo getCifInfo(Path p) throws Exception {
-	CifFile cifFile = CifIO.readFromPath(p);
-	MmCifFile mmCifFile = cifFile.as(StandardSchemata.MMCIF);
-	MmCifBlock data = mmCifFile.getFirstBlock();
-        String seq = data.getEntityPoly().getPdbxSeqOneLetterCode().get(0).replaceAll("\n", "").toLowerCase();
-	StructRef structRef = data.getStructRef();
-	String entryId = structRef.getDbCode().get(0); 
-	String unpStart = structRef.getPdbxAlignBegin().get(0);
-	String unpEnd = structRef.getPdbxAlignEnd().get(0);
-        int unpStartZero = Integer.parseInt(unpStart) - 1;
-        int unpEndZero = Integer.parseInt(unpEnd) - 1;
-	return new CifInfo(seq, entryId, unpStartZero, unpEndZero);
-    }
-
 
     private static List<List<String>> getDBseqs(String entryId) throws Exception {
         List<String> seqs = new ArrayList<String>();	
