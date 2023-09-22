@@ -59,7 +59,7 @@ public class MakeDBModelStructureUniprot {
     private static List<DBSeq> getDBseqs(String entryId) throws Exception {
         List<DBSeq> DBseqs = new ArrayList<>();	
         PreparedStatement DBseqStmt = LocalSQL.prepareStatement("select uniprot.id, astral_seq.seq from uniprot join uniprot_seq on uniprot.id = uniprot_seq.uniprot_id join astral_seq on astral_seq.id = uniprot_seq.seq_id where uniprot.long_id = '?' order by uniprot.seq_date desc;");
-	DBseqStmt.setString(0, entryId);
+	DBseqStmt.setString(1, entryId);
 	ResultSet DBseqRs = DBseqStmt.executeQuery();
         while (DBseqRs.next()) {
             DBseqs.add(new DBSeq(DBseqRs.getString("seq"), DBseqRs.getString("id")));
@@ -67,19 +67,14 @@ public class MakeDBModelStructureUniprot {
 	return DBseqs;
     }
     
-    private static ResultSet doQuery(String query) throws Exception {
-        Statement stmt = LocalSQL.createStatement();
-	return stmt.executeQuery(query);
-    }
-
     /** Adds an entry in `model_structure_uniprot` for each model structure in the
      * `model_structure` table with a reference to the newest sequence stored in 
      * the `uniprot` table that matches the model structure file. Prints "Skipped" and the Uniprot entry ID if not found. */
     public static void main(String[] args) {
 	try {
             LocalSQL.connectRW();
-            String modelPathQuery = "select id, cif_path from model_structure;";
-	    ResultSet modelPathsRs = doQuery(modelPathQuery);
+            PreparedStatement modelPathsStmt = LocalSQL.prepareStatement("select id, cif_path from model_structure;");
+	    ResultSet modelPathsRs = modelPathsStmt.executeQuery();
 	    PreparedStatement insertModelUNP = LocalSQL.prepareStatement("insert into model_structure_uniprot (model_structure_id, uniprot_id, uniprot_start, uniprot_end) values (?, ?, ?, ?);"); 
 	    while (modelPathsRs.next()) {
 		int modelStructureId = modelPathsRs.getInt("id");
@@ -88,14 +83,9 @@ public class MakeDBModelStructureUniprot {
 	        List<DBSeq> DBseqs = getDBseqs(modelSeq.entryId);
 	        boolean skipped = true;
 		for (DBSeq dbSeq : DBseqs) { 
-		    System.out.printf("dbSeq.seq.length: %s %n", dbSeq.seq.length());
-		    System.out.printf("dbSeq.UNPid: %s %n", dbSeq.UNPid);
 		    boolean idxsInBounds = modelSeq.unpStart >= 0 && modelSeq.unpEnd >= 0 && modelSeq.unpStart <= dbSeq.seq.length() && modelSeq.unpEnd <= dbSeq.seq.length();
-		    System.out.printf("idxsInBounds: %s %n", idxsInBounds);
 		    if (idxsInBounds) {
 		        String splicedDBseq = dbSeq.seq.substring(modelSeq.unpStart, modelSeq.unpEnd);
-			System.out.printf("model seq:   %s %n", modelSeq.seq);
-			System.out.printf("spliced seq: %s %n", splicedDBseq);
 			if (splicedDBseq.equals(modelSeq.seq)) {
 			    skipped = false;
 			    insertModelUNP.setInt(1, modelStructureId);
@@ -110,8 +100,6 @@ public class MakeDBModelStructureUniprot {
 		}
 		if (skipped) {
 		     System.out.printf("Skipped: %s %n", modelSeq.entryId);
-		    System.out.printf("modelSeq.unpStart: %s %n", modelSeq.unpStart);
-		    System.out.printf("modelSeq.unpEnd: %s %n %n", modelSeq.unpEnd);
 	        }
 	    }
 	} catch (Exception e) {
