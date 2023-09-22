@@ -70,6 +70,9 @@ public class MakeDBModelStructureUniprot {
 	return stmt.executeQuery(query);
     }
 
+    /** Adds an entry in `model_strucure_uniprot` for each  model structure in the
+     * `model_structure` table with a sequence that matches that stored in 
+     * the `uniprot` table. */
     public static void main(String[] args) {
 	try {
             LocalSQL.connectRW();
