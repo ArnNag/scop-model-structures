@@ -33,10 +33,6 @@ public class MakeDBModelStructureUniprot {
 	    this.entryId = structRef.getDbCode().get(0); 
 	    this.unpStart = Integer.parseInt(structRef.getPdbxAlignBegin().get(0)) - 1; // convert to zero-indexing
 	    this.unpEnd = Integer.parseInt(structRef.getPdbxAlignEnd().get(0)); // convert to zero-indexing
-            this.seq = seq;
-	    this.entryId = entryId;
-	    this.unpStart = unpStart;
-	    this.unpEnd = unpEnd;
 	}
 
     }
