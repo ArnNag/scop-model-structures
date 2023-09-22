@@ -59,7 +59,7 @@ public class MakeDBModelStructureUniprot {
     private static List<DBSeq> getDBseqs(String entryId) throws Exception {
         List<DBSeq> DBseqs = new ArrayList<>();	
         PreparedStatement DBseqStmt = LocalSQL.prepareStatement("select uniprot.id, astral_seq.seq from uniprot join uniprot_seq on uniprot.id = uniprot_seq.uniprot_id join astral_seq on astral_seq.id = uniprot_seq.seq_id where uniprot.long_id = '?' order by uniprot.seq_date desc;");
-	DBseqStmt.setString(0, entryId);
+	DBseqStmt.setString(1, entryId);
 	ResultSet DBseqRs = DBseqStmt.executeQuery();
         while (DBseqRs.next()) {
             DBseqs.add(new DBSeq(DBseqRs.getString("seq"), DBseqRs.getString("id")));
