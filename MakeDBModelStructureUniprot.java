@@ -19,7 +19,7 @@ public class MakeDBModelStructureUniprot {
 	String seq;
 	String entryId; // Uniprot entry ID
 	int unpStart; // zero-indexed, inclusive
-	int unpEnd; // zero-indexed, inclusive - TODO: check this
+	int unpEnd; // zero-indexed, exclusive - TODO: check this against later code
 
         /** Read the relevant information from the cif file.
 	 * @param p: The Path where the cif file exists.
@@ -38,6 +38,7 @@ public class MakeDBModelStructureUniprot {
 	    this.unpStart = unpStart;
 	    this.unpEnd = unpEnd;
 	}
+
     }
 
     /** Represents a sequence retrieved from the `uniprot` table and the associated primary key id.  */
@@ -70,9 +71,9 @@ public class MakeDBModelStructureUniprot {
 	return stmt.executeQuery(query);
     }
 
-    /** Adds an entry in `model_strucure_uniprot` for each  model structure in the
-     * `model_structure` table with a sequence that matches that stored in 
-     * the `uniprot` table. */
+    /** Adds an entry in `model_structure_uniprot` for each model structure in the
+     * `model_structure` table with a reference to the newest sequence stored in 
+     * the `uniprot` table that matches the model structure file. Prints "Skipped" and the Uniprot entry ID if not found. */
     public static void main(String[] args) {
 	try {
             LocalSQL.connectRW();
@@ -84,10 +85,13 @@ public class MakeDBModelStructureUniprot {
 		Path cifPath = Paths.get(modelPathsRs.getString("cif_path"));
 		CifSeq modelSeq = new CifSeq(cifPath);
 	        List<DBSeq> DBseqs = getDBseqs(modelSeq.entryId);
+	        boolean skipped = true;
 		for (DBSeq dbSeq : DBseqs) { 
-		    if (modelSeq.unpStart < dbSeq.seq.length()) {
-		        String splicedDBseq = dbSeq.seq.substring(modelSeq.unpStart, modelSeq.unpEnd + 1);
+		    boolean idxsInBounds = modelSeq.unpStart >= 0 && modelSeq.unpEnd >= 0 && modelSeq.unpStart < dbSeq.seq.length() && modelSeq.unpEnd < dbSeq.seq.length();
+		    if (idxsInBounds) {
+		        String splicedDBseq = dbSeq.seq.substring(modelSeq.unpStart, modelSeq.unpEnd);
 			if (splicedDBseq.equals(modelSeq.seq)) {
+			    skipped = false;
 			    insertModelUNP.setInt(1, modelStructureId);
 			    insertModelUNP.setString(2, dbSeq.UNPid);
 			    insertModelUNP.setInt(3, modelSeq.unpStart);
@@ -96,10 +100,14 @@ public class MakeDBModelStructureUniprot {
 			    break;
 			}
 		    }
+
 		}
+		if (skipped) {
+		     System.out.printf("Skipped: %s %n", modelSeq.entryId);
+	        }
 	    }
 	} catch (Exception e) {
-            System.out.println("Exception: "+e.getMessage());
+            System.out.println("Exception: " + e.getMessage());
             e.printStackTrace();
         }
     }
