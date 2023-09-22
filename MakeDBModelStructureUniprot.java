@@ -32,7 +32,7 @@ public class MakeDBModelStructureUniprot {
 	    StructRef structRef = data.getStructRef();
 	    this.entryId = structRef.getDbCode().get(0); 
 	    this.unpStart = Integer.parseInt(structRef.getPdbxAlignBegin().get(0)) - 1; // convert to zero-indexing
-	    this.unpEnd = Integer.parseInt(structRef.getPdbxAlignEnd().get(0)) - 1; // convert to zero-indexing
+	    this.unpEnd = Integer.parseInt(structRef.getPdbxAlignEnd().get(0)); // convert to zero-indexing
             this.seq = seq;
 	    this.entryId = entryId;
 	    this.unpStart = unpStart;
@@ -87,9 +87,14 @@ public class MakeDBModelStructureUniprot {
 	        List<DBSeq> DBseqs = getDBseqs(modelSeq.entryId);
 	        boolean skipped = true;
 		for (DBSeq dbSeq : DBseqs) { 
-		    boolean idxsInBounds = modelSeq.unpStart >= 0 && modelSeq.unpEnd >= 0 && modelSeq.unpStart < dbSeq.seq.length() && modelSeq.unpEnd < dbSeq.seq.length();
+		    System.out.printf("dbSeq.seq.length: %s %n", dbSeq.seq.length());
+		    System.out.printf("dbSeq.UNPid: %s %n", dbSeq.UNPid);
+		    boolean idxsInBounds = modelSeq.unpStart >= 0 && modelSeq.unpEnd >= 0 && modelSeq.unpStart <= dbSeq.seq.length() && modelSeq.unpEnd <= dbSeq.seq.length();
+		    System.out.printf("idxsInBounds: %s %n", idxsInBounds);
 		    if (idxsInBounds) {
 		        String splicedDBseq = dbSeq.seq.substring(modelSeq.unpStart, modelSeq.unpEnd);
+			System.out.printf("model seq:   %s %n", modelSeq.seq);
+			System.out.printf("spliced seq: %s %n", splicedDBseq);
 			if (splicedDBseq.equals(modelSeq.seq)) {
 			    skipped = false;
 			    insertModelUNP.setInt(1, modelStructureId);
@@ -104,6 +109,8 @@ public class MakeDBModelStructureUniprot {
 		}
 		if (skipped) {
 		     System.out.printf("Skipped: %s %n", modelSeq.entryId);
+		    System.out.printf("modelSeq.unpStart: %s %n", modelSeq.unpStart);
+		    System.out.printf("modelSeq.unpEnd: %s %n %n", modelSeq.unpEnd);
 	        }
 	    }
 	} catch (Exception e) {
