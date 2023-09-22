@@ -83,12 +83,12 @@ public class MakeDBModelStructureUniprot {
 		    if (idxsInBounds) {
 		        String splicedDBseq = dbSeq.seq.substring(modelSeq.unpStart, modelSeq.unpEnd);
 			if (splicedDBseq.equals(modelSeq.seq)) {
-			    skipped = false;
 			    insertModelUNP.setInt(1, modelStructureId);
 			    insertModelUNP.setString(2, dbSeq.UNPid);
 			    insertModelUNP.setInt(3, modelSeq.unpStart);
 			    insertModelUNP.setInt(4, modelSeq.unpEnd);
 			    insertModelUNP.executeUpdate();
+			    skipped = false;
 			    break;
 			}
 		    }
