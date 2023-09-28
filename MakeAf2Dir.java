@@ -6,7 +6,7 @@ public class MakeAf2Dir {
 
 	// Set these to the appropriate paths.
 	static Path af2Download = Paths.get("/h/anagle/populate_model_structure/UP000005640_9606_HUMAN_v4");
-	static Path af2Out = Paths.get("/lab/db/model_structures/alphafolddb/v4")
+	static Path af2Out = Paths.get("/lab/db/model_structures/alphafolddb/v4");
 	static Path af2ConvertScript = Paths.get("/h/anagle/cif2xml/af2convert.sh");
 
 	static Path af2Pdb = af2Out.resolve("pdb");
