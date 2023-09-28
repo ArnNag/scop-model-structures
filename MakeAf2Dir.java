@@ -4,12 +4,14 @@ import java.util.List;
 
 public class MakeAf2Dir {
 
-	static Path af2Download = Paths.get("/h/anagle/UP000005640_9606_HUMAN_v4");
+	// Set these to the appropriate paths.
+	static Path af2Download = Paths.get("/h/anagle/populate_model_structure/UP000005640_9606_HUMAN_v4");
 	static Path af2Out = Paths.get("/lab/db/model_structures/alphafolddb/v4")
+	static Path af2ConvertScript = Paths.get("/h/anagle/cif2xml/af2convert.sh");
+
 	static Path af2Pdb = af2Out.resolve("pdb");
 	static Path af2Cif = af2Out.resolve("cif");
 	static Path af2Xml = af2Out.resolve("xml");
-	static Path af2ConvertScript = Paths.get("/h/anagle/cif2xml/af2convert.sh");
 
     private static String unzipAndCopy(Path zipped, Path targetDir) throws IOException, InterruptedException {
                         ProcessBuilder gunzipProcess = new ProcessBuilder("gunzip", zipped.toString());
