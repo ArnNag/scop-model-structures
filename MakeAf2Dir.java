@@ -6,12 +6,10 @@ public class MakeAf2Dir {
 
 	// Set these to the appropriate paths.
 	static Path af2Download = Paths.get("/h/anagle/populate_model_structure/UP000005640_9606_HUMAN_v4");
-	static Path af2Out = Paths.get("/lab/db/model_structures/alphafolddb/v4");
-	static Path af2ConvertScript = Paths.get("/h/anagle/cif2xml/af2convert.sh");
+	static Path af2Out = Paths.get("/h/anagle/zippedAf2");
+	static Path cppDictPackBuild = Paths.get("/h/anagle/cif2xml/cpp-dict-pack/build");
+	static String dictName = "mmcif_ma"; // the name of the dictionary that the CIF files were constructed with
 
-	static Path af2Pdb = af2Out.resolve("pdb");
-	static Path af2Cif = af2Out.resolve("cif");
-	static Path af2Xml = af2Out.resolve("xml");
 
     private static String unzipAndCopy(Path zipped, Path targetDir) throws IOException, InterruptedException {
                         ProcessBuilder gunzipProcess = new ProcessBuilder("gunzip", zipped.toString());
@@ -26,6 +24,11 @@ public class MakeAf2Dir {
     }
 
     public static void main(String[] args) {
+	Path af2Pdb = af2Out.resolve("pdb");
+	Path af2Cif = af2Out.resolve("cif");
+	Path af2Xml = af2Out.resolve("xml");
+	Path dictPath = cppDictPackBuild.resolve("odb").resolve(String.format("%s.odb", dictName));
+	Path convertScript = cppDictPackBuild.resolve("bin").resolve("mmcif2XML");
 
         try {
             Files.createDirectories(af2Out);
@@ -52,7 +55,8 @@ public class MakeAf2Dir {
 
                         String unzippedCif = unzipAndCopy(file, af2CifHash);
                         // Run the conversion script
-                        ProcessBuilder convertProcess = new ProcessBuilder(af2ConvertScript.toString(), unzippedCif);
+                        ProcessBuilder convertProcess = new ProcessBuilder(convertScript.toString(), "-df", dictPath.toString(), "-dictName", String.format("%s.dic", dictName), "-prefix", "pdbx-v50", "-ns", "PDBx", "-f", unzippedCif, "-v");
+			System.out.println(convertProcess.command());
                         convertProcess.directory(af2Download.toFile());
                         Process convert = convertProcess.start();
                         convert.waitFor();
