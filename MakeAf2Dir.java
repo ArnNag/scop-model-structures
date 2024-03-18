@@ -5,23 +5,11 @@ import java.util.List;
 public class MakeAf2Dir {
 
 	// Set these to the appropriate paths.
-	static Path af2Download = Paths.get("/h/anagle/populate_model_structure/UP000005640_9606_HUMAN_v4");
+	static Path af2Download = Paths.get("/h/anagle/populate_model_structure/af2_new");
 	static Path af2Out = Paths.get("/h/anagle/zippedAf2");
 	static Path cppDictPackBuild = Paths.get("/h/anagle/cif2xml/cpp-dict-pack/build");
 	static String dictName = "mmcif_ma"; // the name of the dictionary that the CIF files were constructed with
 
-
-    private static String unzipAndCopy(Path zipped, Path targetDir) throws IOException, InterruptedException {
-                        ProcessBuilder gunzipProcess = new ProcessBuilder("gunzip", zipped.toString());
-                        gunzipProcess.directory(af2Download.toFile());
-                        Process gunzip = gunzipProcess.start();
-                        gunzip.waitFor();
-
-                        String unzipped = zipped.getFileName().toString().replace(".gz", "");
-			Files.copy(af2Download.resolve(unzipped), targetDir.resolve(unzipped), StandardCopyOption.REPLACE_EXISTING);
-			return unzipped;
-
-    }
 
     public static void main(String[] args) {
 	Path af2Pdb = af2Out.resolve("pdb");
@@ -45,26 +33,30 @@ public class MakeAf2Dir {
 			if (file.getFileName().toString().endsWith(".pdb.gz")) {
 				Path af2PdbHash = af2Pdb.resolve(hash);
 				Files.createDirectories(af2PdbHash);
-				unzipAndCopy(file, af2PdbHash);
+				Files.copy(file, af2PdbHash.resolve(file.getFileName()), StandardCopyOption.REPLACE_EXISTING);
                 } else if (file.getFileName().toString().endsWith(".cif.gz")) {
                         Path af2CifHash = af2Cif.resolve(hash);
                         Path af2XmlHash = af2Xml.resolve(hash);
                         Files.createDirectories(af2CifHash);
                         Files.createDirectories(af2XmlHash);
 
+			Files.copy(file, af2CifHash.resolve(file.getFileName()), StandardCopyOption.REPLACE_EXISTING);
 
-                        String unzippedCif = unzipAndCopy(file, af2CifHash);
+			// Unzip the cif file
+			ProcessBuilder gunzipProcess = new ProcessBuilder("gunzip", file.toString());
+			System.out.println(gunzipProcess.command());
+			Path unzippedCif = af2Download.resolve(file.getFileName().toString().replace(".gz", ""));
                         // Run the conversion script
-                        ProcessBuilder convertProcess = new ProcessBuilder(convertScript.toString(), "-df", dictPath.toString(), "-dictName", String.format("%s.dic", dictName), "-prefix", "pdbx-v50", "-ns", "PDBx", "-f", unzippedCif, "-v");
+                        ProcessBuilder convertProcess = new ProcessBuilder(convertScript.toString(), "-df", dictPath.toString(), "-dictName", String.format("%s.dic", dictName), "-prefix", "pdbx-v50", "-ns", "PDBx", "-f", unzippedCif.toString(), "-v");
 			System.out.println(convertProcess.command());
                         convertProcess.directory(af2Download.toFile());
                         Process convert = convertProcess.start();
                         convert.waitFor();
 
-                        // Rename the resulting file to .xml
-                        Path convertedFileName = af2Download.resolve(unzippedCif.replace(".cif", ".cif.xml"));
-                        Path xmlFileName = af2XmlHash.resolve(unzippedCif.replace(".cif", ".xml"));
-                        Files.move(convertedFileName, xmlFileName, StandardCopyOption.REPLACE_EXISTING);
+                        // Zip the resulting file to a file that ends in .xml.gz
+                        String convertedXML = af2Download.resolve(file.getFileName()).toString().replace(".cif.gz", ".cif.xml");
+                        String xmlTarget = af2XmlHash.resolve(file.getFileName()).toString().replace(".cif.gz", ".xml.gz");
+			ProcessBuilder gzipProcess = new ProcessBuilder("zcat", convertedXML, ">", xmlTarget);
                     }
                 }
             }
